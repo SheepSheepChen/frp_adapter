@@ -8,7 +8,7 @@ import (
 	"github.com/ttlv/frp_adapter/config"
 )
 
-func Notice(operating string, status_now string, c *gin.Context) {
+func Notice(operating string, status_now string, c *gin.Context)  error{
 	cfg := config.MustGetFrpsConfig()
 
 	var str = map[string]interface{}{"uid": c.Request.FormValue("unique_id"), "status_now": status_now, "operating": operating, "status": c.Request.FormValue("status")}
@@ -24,5 +24,7 @@ func Notice(operating string, status_now string, c *gin.Context) {
 	title := "节点创建更新通知"
 	if err := robot.SendMarkdown(title, text, atMobiles, isAtAll); err != nil {
 		logrus.Error(err)
+		return err
 	}
+	return nil
 }

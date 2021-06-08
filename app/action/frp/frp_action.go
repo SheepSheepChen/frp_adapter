@@ -43,7 +43,12 @@ func (handler *Handlers) FrpCreate(c *gin.Context) {
 		return
 	}
 	//nm创建成功后，发送通知
-	notification.Notice("创建","Not created",c)
+	if err :=notification.Notice("创建","Not created",c);err !=nil{
+		fmt.Println(err)
+	}
+	if err :=notification.EventNotice(c);err !=nil{
+		fmt.Println(err)
+	}
 	helpers.RenderSuccessJSON(c, http.StatusOK, fmt.Sprintf("create nodemaintenances-%v crd resource in k8s cluster successfully", c.PostForm("unique_id")))
 	return
 }
@@ -82,7 +87,14 @@ func (handler *Handlers) FrpUpdate(c *gin.Context) {
 		return
 	}
 	//更新成果后发送通知
-	notification.Notice("更新",nm.Status.Services[0].Status,c)
+	if err :=notification.Notice("更新",nm.Status.Services[0].Status,c);err !=nil{
+		fmt.Println("notice start")
+		fmt.Println(err)
+	}
+	if err :=notification.EventNotice(c);err !=nil{
+		fmt.Println("notice start")
+		fmt.Println(err)
+	}
 	helpers.RenderSuccessJSON(c, http.StatusOK, "Update Successfully")
 	return
 }

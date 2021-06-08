@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/ttlv/frp_adapter/config"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	"path/filepath"
@@ -40,3 +41,14 @@ func NewDynamicClient() (client dynamic.Interface, err error) {
 	}
 	return
 }
+
+func NewClientset() (*kubernetes.Clientset, error){
+	config, err := clientcmd.BuildConfigFromFlags("", *Kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+	// 实例化clientset对象
+	clientset, err := kubernetes.NewForConfig(config)
+	return clientset,err
+}
+
