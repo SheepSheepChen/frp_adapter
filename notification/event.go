@@ -20,17 +20,24 @@ func EventNotice(c *gin.Context) error{
 		logrus.Error(err)
 		return err
 	}
+	//获取deploy uid
+	deploy ,err :=clientset.AppsV1().Deployments("default").Get("frp-adapter",metav1.GetOptions{})
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
 	//新建 event对象
 	event :=&apiv1.Event{}
 	if c.Request.FormValue("status") == "offline" {
 		event = &apiv1.Event{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "frp-adapter_node-"+c.Request.FormValue("unique_id")+"."+rand.String(10),
+				Name: "frp-adapter-node-"+c.Request.FormValue("unique_id")+"."+rand.String(8),
 			},
 			InvolvedObject: apiv1.ObjectReference{
-				Kind:      "pod",
-				Name:      "frp-adapter_node-" +c.Request.FormValue("unique_id"),
+				Kind:      "deployment",
+				Name:      "frp-adapter",
 				Namespace: "default",
+				UID: deploy.ObjectMeta.UID,
 			},
 			FirstTimestamp: metav1.Time{time.Now()},
 			Message:        "node-" +c.Request.FormValue("unique_id")+" disconnect",
@@ -40,12 +47,13 @@ func EventNotice(c *gin.Context) error{
 	}else if c.Request.FormValue("status") == "online"{
 		event = &apiv1.Event{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "frp-adapter_node-"+c.Request.FormValue("unique_id")+"."+rand.String(10),
+				Name: "frp-adapter-node-"+c.Request.FormValue("unique_id")+"."+rand.String(10),
 			},
 			InvolvedObject: apiv1.ObjectReference{
-				Kind:      "pod",
-				Name:      "frp-adapter_node-" +c.Request.FormValue("unique_id"),
+				Kind:      "deployment",
+				Name:      "frp-adapter",
 				Namespace: "default",
+				UID: deploy.ObjectMeta.UID,
 			},
 			FirstTimestamp: metav1.Time{time.Now()},
 			Message:        "node-" +c.Request.FormValue("unique_id")+" connect",
