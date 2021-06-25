@@ -6,7 +6,6 @@ build:
 	@rm frp-adapter
 
 push: build
-	@$(eval REV := $(shell git rev-parse HEAD|cut -c 1-8))
-	@docker tag frp-adapter gopherlv/frp-adapter-http:$(REV)
-	@docker push gopherlv/frp-adapter-http:$(REV)
+	@docker tag frp-adapter registry.cn-hangzhou.aliyuncs.com/czymirror/frp-adapter:v3.04
+	@docker push registry.cn-hangzhou.aliyuncs.com/czymirror/frp-adapter:v3.04
 

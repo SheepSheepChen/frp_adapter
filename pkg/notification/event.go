@@ -13,18 +13,18 @@ import (
 	_ "k8s.io/client-go/kubernetes"
 )
 
-func EventNotice(c *gin.Context) error{
+func EventNotice(c *gin.Context) {
 	//新建clientset客户端
 	clientset, err := frp_adapter_init.NewClientset()
 	if err != nil {
 		logrus.Error(err)
-		return err
+
 	}
 	//获取deploy uid
 	deploy ,err :=clientset.AppsV1().Deployments("default").Get("frp-adapter",metav1.GetOptions{})
 	if err != nil {
 		logrus.Error(err)
-		return err
+
 	}
 	//新建 event对象
 	event :=&apiv1.Event{}
@@ -66,8 +66,8 @@ func EventNotice(c *gin.Context) error{
 	result, err := clientset.CoreV1().Events("default").Create(event)
 	if err != nil {
 		logrus.Error(err)
-		return err
+
 	}
 	fmt.Printf("event:%v\n", result.Message)
-	return nil
+
 }

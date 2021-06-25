@@ -5,16 +5,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ttlv/frp_adapter/app/entries"
 	"github.com/ttlv/frp_adapter/app/helpers"
+	"github.com/ttlv/frp_adapter/global"
 	"github.com/ttlv/frp_adapter/model"
 	"github.com/ttlv/frp_adapter/nm_action"
-	"github.com/ttlv/frp_adapter/notification"
-	"k8s.io/client-go/dynamic"
-	"net/http"
-	"strings"
-
+	"github.com/ttlv/frp_adapter/pkg/notification"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"net/http"
+	"strings"
+	"time"
 )
 
 type Handlers struct {
@@ -43,12 +44,9 @@ func (handler *Handlers) FrpCreate(c *gin.Context) {
 		return
 	}
 	//nm创建成功后，发送通知
-	if err :=notification.Notice("创建","Not created",c);err !=nil{
-		fmt.Println(err)
-	}
-	if err :=notification.EventNotice(c);err !=nil{
-		fmt.Println(err)
-	}
+	notification.Notice("创建", "Not created", c)
+	notification.EventNotice(c)
+
 	helpers.RenderSuccessJSON(c, http.StatusOK, fmt.Sprintf("create nodemaintenances-%v crd resource in k8s cluster successfully", c.PostForm("unique_id")))
 	return
 }
@@ -75,27 +73,42 @@ func (handler *Handlers) FrpUpdate(c *gin.Context) {
 		}
 	}
 	//在nm更新前获取status
-	nm ,err:=nm_action.NMFetchOne(handler.DynamicClient, handler.GVR, c.Request.FormValue("unique_id"))
+	nm, err := nm_action.NMFetchOne(handler.DynamicClient, handler.GVR, c.Request.FormValue("unique_id"))
+	statusBefore := nm.Status.Services[0].Status
 	if err != nil {
 		helpers.RenderFailureJSON(c, http.StatusBadRequest, fmt.Sprintf("created failed: %v", err))
 		return
 	}
 
-	err = nm_action.NMNormalUpdate(handler.DynamicClient, handler.GVR, frpServers)
+	if statusBefore != c.Request.FormValue("status") {
+		err = nm_action.NMNormalUpdate(handler.DynamicClient, handler.GVR, frpServers)
+		if c.Request.FormValue("status") == "online" {
+			global.NoticeTrigger.UpdateConnectTime()
+		} else {
+			global.NoticeTrigger.UpdateDieconnectTime()
+		}
+
+		go func() {
+			time.Sleep(10 * time.Second)
+			fmt.Println("ct",global.NoticeTrigger.ConnectTime)
+			fmt.Println("dt",global.NoticeTrigger.DisconnectTime)
+			if global.NoticeTrigger.IsNotice() {
+				//更新成果后发送通知
+				notification.Notice("更新", statusBefore, c)
+				notification.EventNotice(c)
+				return
+			}
+			return
+		}()
+
+	}
+
 	if err != nil {
 		helpers.RenderFailureJSON(c, http.StatusBadRequest, fmt.Sprintf("update failed: %v", err))
 		return
 	}
-	//更新成果后发送通知
-	if err :=notification.Notice("更新",nm.Status.Services[0].Status,c);err !=nil{
-		fmt.Println("notice start")
-		fmt.Println(err)
-	}
-	if err :=notification.EventNotice(c);err !=nil{
-		fmt.Println("notice start")
-		fmt.Println(err)
-	}
 	helpers.RenderSuccessJSON(c, http.StatusOK, "Update Successfully")
+	time.Sleep(30 * time.Second)
 	return
 }
 
